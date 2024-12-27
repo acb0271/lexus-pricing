@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lexus 報價工具</title>
+  <style>
+    :root {
+      --primary-color: #1a1a1a;
+      --secondary-color: #666;
+      --accent-color: #bf1931;
+      --background-color: #f5f5f5;
+      --border-color: #ddd;
+      --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+      background-color: var(--background-color);
+      color: var(--primary-color);
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    h1 {
+      color: var(--accent-color);
+      text-align: center;
+      margin-bottom: 2rem;
+      font-size: 2rem;
+    }
+
+    h2 {
+      color: var(--secondary-color);
+      margin-top: 2rem;
+      font-size: 1.5rem;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 0.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--secondary-color);
+      font-weight: 500;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 2px rgba(191, 25, 49, 0.1);
+    }
+
+    .option-container {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+    }
+
+    .option-container:hover {
+      background-color: var(--background-color);
+    }
+
+    .option-container input[type="checkbox"] {
+      width: auto;
+      margin-right: 1rem;
+      margin-bottom: 0;
+    }
+
+    button {
+      background-color: var(--accent-color);
+      color: white;
+      padding: 1rem 2rem;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #a01528;
+    }
+
+    .results {
+      margin-top: 2rem;
+      padding: 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background-color: white;
+    }
+
+    .highlight {
+      color: var(--accent-color);
+      font-weight: bold;
+    }
+
+    .price-mode-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      margin-bottom: 1rem;
+    }
+
+    .price-mode-toggle input[type="checkbox"] {
+      width: auto;
+      margin-right: 0.5rem;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Lexus 報價工具</h1>
+    
+    <div class="price-mode-toggle">
+      <label>
+        <input type="checkbox" id="toggle-price-mode"> Hello
+      </label>
+    </div>
+
+    <div class="form-group">
+      <label for="car-model">請選擇車型：</label>
+      <select id="car-model">
+        <option value="">請選擇車型</option>
+      </select>
+    </div>
+
+    <div id="car-options-container" class="hidden">
+      <h2>選配項目</h2>
+      <div id="car-options"></div>
+    </div>
+
+    <div class="form-group">
+      <h2>折扣</h2>
+      <label for="discount">輸入折扣金額（萬元）：</label>
+      <input type="number" id="discount" placeholder="請輸入折扣金額" min="0">
+    </div>
+
+    <div class="form-group">
+      <h2>貸款試算</h2>
+      <label for="down-payment">貸款金額（萬元）：</label>
+      <input type="number" id="down-payment" placeholder="請輸入貸款金額" min="0">
+
+      <label for="loan-years">貸款期數：</label>
+      <select id="loan-years">
+        <option value="1">1年</option>
+        <option value="2">2年</option>
+        <option value="3">3年</option>
+        <option value="4">4年</option>
+        <option value="5">5年</option>
+        <option value="6" selected>6年</option>
+      </select>
+    </div>
+
+    <button id="calculate-price">計算總價與貸款</button>
+
+    <div id="quote-result-container" class="results hidden">
+      <h2>報價結果</h2>
+      <div id="quote-result"></div>
+      <button id="export-pdf" class="hidden">導出報價結果 PDF</button>
+    </div>
+  </div>
+
+  <script>
+    // 本地車型資料
+    const carData = [
+      {"model": "ES 200 曜銀風尚車型 豪華版", "price": "177萬"},
+      {"model": "ES 200 曜銀風尚車型 頂級版", "price": "195萬"},
+      {"model": "ES 250 F Sport", "price": "218萬"},
+      {"model": "ES 300h 豪華版", "price": "203萬"},
+      {"model": "ES 300h F Sport", "price": "220萬"},
+      {"model": "ES 300h 旗艦版", "price": "249萬"},
+      {"model": "IS 300h 豪華版", "price": "199萬"},
+      {"model": "IS 300h 頂級版", "price": "209萬"},
+      {"model": "IS 300h F Sport Design版", "price": "201萬"},
+      {"model": "IS 300h F Sport版", "price": "205萬"},
+      {"model": "LBX Active", "price": "129.9萬"},
+      {"model": "LBX Active+", "price": "133萬"},
+      {"model": "LBX Cool", "price": "143萬"},
+      {"model": "LBX Relax", "price": "143萬"},
+      {"model": "LBX Relax+", "price": "169萬"},
+      {"model": "NX 200 菁英版", "price": "171萬"},
+      {"model": "NX 200 豪華版", "price": "181萬"},
+      {"model": "NX 250 豪華版", "price": "197.5萬"},
+      {"model": "NX 250 頂級版", "price": "207.5萬"},
+      {"model": "NX 350 Overtrail版", "price": "234萬"},
+      {"model": "NX 350 F Sport版", "price": "263萬"},
+      {"model": "NX 350h 豪華版", "price": "207.5萬"},
+      {"model": "NX 350h 頂級版", "price": "227.5萬"},
+      {"model": "NX 350h 旗艦版", "price": "257.5萬"},
+      {"model": "NX 450h+ 豪華版", "price": "237.5萬"},
+      {"model": "NX 450h+ F Sport版", "price": "284.5萬"},
+      {"model": "RX 350 豪華版", "price": "246萬"},
+      {"model": "RX 350 頂級版", "price": "268萬"},
+      {"model": "RX 350 旗艦版", "price": "295萬"},
+      {"model": "RX 350h 豪華版", "price": "256萬"},
+      {"model": "RX 350h 頂級版", "price": "278萬"},
+      {"model": "RX 350h 旗艦版", "price": "305萬"},
+      {"model": "RX 450h+ 豪華版", "price": "315萬"},
+      {"model": "RX 450h+ 旗艦版", "price": "355萬"},
+      {"model": "RX 500h F Sport Performance", "price": "361萬"},
+      {"model": "UX 300h 豪華版", "price": "149.9萬"},
+      {"model": "UX 300h F Sport Design", "price": "171.9萬"},
+      {"model": "RZ 450e 旗艦版", "price": "230萬"}
+    ];
+
+// 保留付費項目的選配資料
+const optionsData = [
+  {"項目": "PVM 環景影像系統", "成本價": {"NX": 58000, "UX": 55300, "LBX": 58000, "ES": 53000}, "業務價": {"NX": 39000, "UX": 36000, "LBX": 39000, "ES": 36000}},
+  {"項目": "E-Mirror 電子後視鏡", "成本價": {"RX": 35000, "NX": 35000, "UX": 35000, "LBX": 35000, "ES": 35000}, "業務價": {"RX": 25000, "NX": 25000, "UX": 25000, "LBX": 25000, "ES": 25000}},
+  {"項目": "全車高端隔熱紙", "成本價": {"RX": 45000, "NX": 40000, "UX": 40000, "LBX": 40000, "ES": 40000}, "業務價": {"RX": 30000, "NX": 22000, "UX": 23000, "LBX": 23000, "ES": 23000}},
+  {"項目": "瓷晶鍍膜", "互斥": "鉑金鍍膜", "成本價": {"RX": 36000, "NX": 36000, "UX": 36000, "LBX": 36000, "ES": 36000}, "業務價": {"RX": 18000, "NX": 18000, "UX": 16000, "LBX": 16000, "ES": 16000}},
+  {"項目": "鉑金鍍膜", "互斥": "瓷晶鍍膜", "成本價": {"RX": 29000, "NX": 29000, "UX": 27000, "LBX": 27000, "ES": 27000}, "業務價": {"RX": 12000, "NX": 12000, "UX": 10000, "LBX": 10000, "ES": 10000}},
+  {"項目": "電動側踏", "互斥": "固定側踏", "成本價": {"RX": 62000, "NX": 55000}, "業務價": {"RX": 46000, "NX": 39000}},
+  {"項目": "固定側踏", "互斥": "電動側踏", "成本價": {"RX": 40000, "NX": 40000}, "業務價": {"RX": 26000, "NX": 24500}}
+];
+
+// 靜態定義贈送項目
+const giftItems = [
+  "腳踏墊",
+  "ETC申辦",
+  "鑰匙皮套",
+  "精美交車禮",
+  "後廂防水墊",
+  "95汽油油箱加滿"
+];
+
+
+let priceMode = "成本價";
+  const carModelSelect = document.getElementById('car-model');
+  carData.forEach(car => {
+    const option = document.createElement('option');
+    option.value = car.price.replace('萬', '') * 10000;
+    option.textContent = `${car.model} - ${car.price}`;
+    carModelSelect.appendChild(option);
+  });
+
+  const carOptionsDiv = document.getElementById('car-options');
+// 生成選配項目，僅包含付費項目
+carModelSelect.addEventListener('change', () => {
+  carOptionsDiv.innerHTML = ''; // 清空選配區域
+  const paidOptionsContainer = document.createElement('div'); // 付費選配項目容器
+  paidOptionsContainer.innerHTML = `<h3>選配項目</h3>`;
+
+  const selectedCar = carModelSelect.options[carModelSelect.selectedIndex].text.split(' ')[0];
+  optionsData.forEach(opt => {
+    if (opt[priceMode][selectedCar]) { // 僅處理付費選配項目
+      const container = document.createElement('div');
+      container.classList.add('option-container');
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = opt[priceMode][selectedCar];
+      checkbox.dataset.optionName = opt.項目;
+
+      const label = document.createElement('label');
+      const labelText = `${opt.項目} - ${opt[priceMode][selectedCar].toLocaleString()}元`;
+      label.textContent = labelText;
+
+      container.appendChild(label);
+      container.appendChild(checkbox);
+      paidOptionsContainer.appendChild(container);
+    }
+  });
+
+  // 如果沒有付費選配項目，顯示提示
+  if (paidOptionsContainer.childElementCount === 1) {
+    paidOptionsContainer.innerHTML += '<p>無選配項目</p>';
+  }
+
+  // 將付費選配區域添加到主容器中
+  carOptionsDiv.appendChild(paidOptionsContainer);
+  document.getElementById('car-options-container').classList.remove('hidden');
+});
+// 處理互斥邏輯
+carOptionsDiv.addEventListener('change', (event) => {
+    const selectedOption = event.target;
+    if (selectedOption.checked) {
+        const selectedOptionName = selectedOption.dataset.optionName;
+        const selectedItem = optionsData.find(opt => opt.項目 === selectedOptionName);
+
+        if (selectedItem && selectedItem.互斥) {
+            Array.from(carOptionsDiv.querySelectorAll('input')).forEach(input => {
+                if (input.dataset.optionName === selectedItem.互斥) {
+                    input.checked = false; // 將互斥選項取消選中
+                }
+            });
+        }
+    }
+});
+
+  document.getElementById('toggle-price-mode').addEventListener('change', (e) => {
+    priceMode = e.target.checked ? "業務價" : "成本價";
+    carModelSelect.dispatchEvent(new Event('change'));
+  });
+
+// 報價結果中固定顯示贈送項目
+document.getElementById('calculate-price').addEventListener('click', () => {
+  const carPrice = parseInt(carModelSelect.value || 0, 10);
+  const selectedOptions = Array.from(carOptionsDiv.querySelectorAll('input:checked'));
+
+  // 計算選配總價和選配項目名稱
+  const paidOptionsTotal = selectedOptions.reduce((sum, opt) => sum + parseInt(opt.value, 10), 0);
+  const paidOptionsList = selectedOptions
+    .map(opt => opt.parentElement.querySelector('label').textContent.split(' - ')[0])
+    .join(', ');
+
+  const totalPrice = carPrice + paidOptionsTotal;
+
+  const discount = parseInt((document.getElementById('discount').value || 0) * 10000, 10);
+  const discountedPrice = totalPrice - discount;
+
+  const loanAmount = parseInt((document.getElementById('down-payment').value || 0) * 10000, 10);
+  const downPayment = discountedPrice - loanAmount;
+
+  const loanYears = parseInt(document.getElementById('loan-years').value, 10);
+  const interestRate = 2.99 / 100;
+  const monthlyRate = interestRate / 12;
+  const totalMonths = loanYears * 12;
+
+  const monthlyPayment = loanAmount > 0 ? Math.ceil(
+    (loanAmount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -totalMonths))
+  ) : 0;
+
+  // 構建報價結果內容
+  let resultHTML = `
+    車型: ${carModelSelect.options[carModelSelect.selectedIndex].text}<br>
+    <strong>選配項目：</strong><br>
+    ${paidOptionsList ? `<ul>${selectedOptions.map(opt => `<li>${opt.parentElement.querySelector('label').textContent.split(' - ')[0]}</li>`).join('')}</ul>` : '<p>無選配項目</p>'}
+    <strong>贈送項目：</strong><br>
+    <ul>${giftItems.map(item => `<li>${item}</li>`).join('')}</ul>
+    選配總價: <span class="highlight">${paidOptionsTotal.toLocaleString()}元</span><br>
+    折扣: ${discount.toLocaleString()}元<br>
+    <strong>總價: ${discountedPrice.toLocaleString()}元</strong><br>
+  `;
+
+  // 如果貸款金額和頭期款存在，則顯示相關內容
+  if (loanAmount > 0) {
+    resultHTML += `
+      貸款金額: ${loanAmount.toLocaleString()}元<br>
+      頭期款: ${downPayment.toLocaleString()}元<br>
+      月付金額: <span class="highlight">${monthlyPayment.toLocaleString()}元</span>
+    `;
+  }
+
+  // 更新報價結果
+  document.getElementById('quote-result').innerHTML = resultHTML;
+
+  // 顯示結果容器
+  document.getElementById('quote-result-container').classList.remove('hidden');
+  document.getElementById('quote-result-container').scrollIntoView({ behavior: 'smooth' });
+});
+
+document.getElementById('export-pdf').addEventListener('click', () => {
+  const quoteResult = document.getElementById('quote-result');
+  if (!quoteResult || quoteResult.innerHTML.trim() === '尚未計算...') {
+    alert('無法找到報價結果，請先生成報價。');
+    return;
+  }
+
+  const element = document.createElement('div');
+  element.innerHTML = `
+    <h1>Lexus 報價結果</h1>
+    <p>${quoteResult.innerHTML}</p>
+  `;
+
+  const opt = {
+    margin: 1,
+    filename: 'Lexus-報價結果.pdf',
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().from(element).set(opt).save();
+});
+</script>
+</body>
+</html>
